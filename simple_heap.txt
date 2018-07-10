@@ -1,0 +1,110 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define MAX_NODE 50000
+
+int heap[MAX_NODE];
+int heap_size;
+
+void heap_init(){
+  heap_size = 0;  
+}
+
+void swap(int ix, int rx){
+  int temp = heap[ix];
+  heap[ix] = heap[rx];
+  heap[rx] = temp;
+}
+
+void heap_rebuild_bottom_up(int ix){
+  int p_ix;
+  while(ix > 1){
+    p_ix = ix/2;
+    if(heap[p_ix] < heap[ix]){
+      swap(p_ix, ix);
+      ix = p_ix;
+    }else break;
+  }
+}
+
+void heap_rebuild_top_down(int ix){
+  int l_ix, r_ix;
+  int big_ix;
+  while(ix<heap_size){
+    l_ix = ix*2;
+    r_ix = l_ix+1;
+    if(l_ix > heap_size) break;
+    if(r_ix > heap_size) big_ix = l_ix;
+    else{
+      big_ix = (heap[l_ix] > heap[r_ix] ? l_ix : r_ix);
+    }
+    if(heap[ix] < heap[big_ix]){
+      swap(ix, big_ix);
+      ix = big_ix;
+    }else break;
+  }
+}
+
+void heap_add_node(int new_node){
+  heap[++heap_size] = new_node;
+  heap_rebuild_bottom_up(heap_size);
+}
+
+void heap_del_node(int ix){
+  if(ix<=heap_size && ix>0){
+    printf("[DEL][ix:%d][val:%d] ", ix, heap[ix]);
+    heap[ix] = heap[heap_size--];
+    heap_rebuild_top_down(ix);
+  }
+}
+
+int heap_pop(){
+  int ret = -1;
+  if(heap_size > 0){ 
+    ret = heap[1];
+    if(heap_size > 1){
+      heap[1] = heap[heap_size];
+    }
+    heap_size--;
+  }
+  heap_rebuild_top_down(1);
+
+  return ret;
+}
+
+void print_heap(){
+  int temp[MAX_NODE]; int size = heap_size;
+  for(int i=1; i<=heap_size; i++){
+    temp[i] = heap[i];
+  }
+  int num;
+  printf("{ ");
+  while(heap_size>0){
+    num = heap_pop(); 
+    printf("%d ", num);
+  }
+  printf("}");
+  for(int i=1; i<=size; i++){
+     heap[i] = temp[i]; 
+  }
+  heap_size = size;
+}
+
+int main(){
+  heap_init();
+
+  srand(time(NULL)); 
+  for(int i=0; i<10; i++){
+    int num = rand()&1023;
+    heap_add_node(num);
+    print_heap();puts("");
+  }
+  puts("---");
+  while(heap_size>0){
+    int del_ix = (heap_size/2 < 1 ? 1 : heap_size/2);
+    print_heap();printf("->");
+    heap_del_node(del_ix);printf("->");
+    print_heap();puts("");
+  }
+}

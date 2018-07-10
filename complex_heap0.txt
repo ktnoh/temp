@@ -1,0 +1,238 @@
+#include <stdio.h>
+
+#define MAX_NODE 70000
+#define MAX_HEAP 50000
+#define null 0
+
+struct NODE;
+
+bool lessthan(NODE* l, NODE* r);
+bool greaterthan(NODE* l, NODE* r);
+void swap(int which_h, int ix, int jx);
+
+void db_init();
+void heap_init();
+void init(int n);
+
+NODE* node_alloc(int id_, int tendency_);
+
+void heap_add_node(int which_h, NODE* new_node);
+void heap_delete_node(int which_h, int ix);
+void mid_heap_add_node(NODE* new_node);
+void mid_heap_valance();
+
+void heap_rebuild_bottom_up(int which_h, int ix);
+void heap_rebuild_top_down(int which_h, int ix);
+
+
+void addMember(int id, int tendency);
+void dellMember(NODE* del_node);
+
+int get_id_max_node();
+int get_id_min_node();
+int get_id_mid_node();
+
+struct NODE{
+  int id;
+  int tendency;
+  int heap_ix[4];
+}DB[MAX_HEAP];
+
+int N;
+
+int db_ix;
+
+bool (*compare[4])(NODE*, NODE*);
+NODE* heap[4][MAX_HEAP+1];
+int heap_size[4];
+
+
+void addMember(int id, int tendency){
+  NODE* p = node_alloc(id, tendency);
+  heap_add_node(0,p);
+  heap_add_node(1,p);
+  
+  mid_heap_add_node(p);
+}
+
+void dellMember(NODE* del_node){
+  for(int i=0; i<4; i++){
+    if(del_node->heap_ix[i] == 0) continue;
+    heap_delete_node(i, del_node->heap_ix[i]);
+  }
+
+  mid_heap_valance();
+}
+
+int get_id_max_node(){
+  NODE* max_node = heap[0][1];
+  int max_id = max_node->id;
+  
+  dellMember(max_node);
+  return max_id;
+}
+
+int get_id_min_node(){
+  NODE* min_node = heap[1][1];
+  int min_id = min_node->id;
+  
+  dellMember(min_node);
+  return min_id;
+}
+
+int get_id_mid_node(){
+  NODE* mid_node = heap[2][1];
+  int mid_id = mid_node->id;
+
+  if(N%2==0){
+    NODE* tmp = heap[3][1];
+    mid_id += tmp->id;
+
+    dellMember(tmp);
+  }
+
+  dellMember(mid_node);
+  return mid_id;
+}
+
+int main(){
+  int n = 10;
+  init(n);
+
+}
+
+///////////////////////////////////////////////////////////////
+void heap_delete_node(int which_h, int ix){
+  if(ix <= heap_size[which_h] && ix > 0){
+    heap[which_h][ix]->heap_ix[which_h] = 0;
+    heap[which_h][ix] = heap[which_h][heap_size[which_h]--];
+    heap_rebuild_top_down(which_h, ix);
+  }
+}
+void heap_rebuild_bottom_up(int which_h, int ix){
+  if(ix <= heap_size[which_h] && ix > 0){
+    int px;
+    while(ix >= 2){
+      px = ix/2;
+      if(compare[which_h](heap[which_h][px],heap[which_h][ix])){
+        swap(which_h, px, ix);
+        ix = px;
+      }else break;
+    }
+  }
+}
+
+void heap_rebuild_top_down(int which_h, int ix){
+  if(ix <= heap_size[which_h] && ix > 0){
+    int lx, rx;
+    int cx;
+    while(ix<heap_size[which_h]){
+      lx = ix*2;
+      rx = lx+1;
+      if(lx > heap_size[which_h]) break;
+      if(rx > heap_size[which_h]) cx = lx;
+      else{
+        cx = lx;
+        if(compare[which_h](heap[which_h][lx], heap[which_h][rx])){
+          cx = rx;
+        }
+      }
+      if(compare[which_h](heap[which_h][lx], heap[which_h][rx])){
+        swap(which_h, ix, cx);
+        ix = cx;
+      }else break;
+    }
+  }
+}
+
+void heap_add_node(int which_h, NODE* new_node){
+  heap_size[which_h]++;
+  heap[which_h][heap_size[which_h]] = new_node;
+  new_node->heap_ix[which_h] = heap_size[which_h];
+  heap_rebuild_bottom_up(which_h, heap_size[which_h]);
+}
+
+void mid_heap_valance(){
+  
+  int criteria;
+  if(N%2){
+    criteria = 0;
+  }else{
+    criteria = 1;
+  }
+
+  NODE* p;
+  if(heap_size[2] - heap_size[3] > 1){
+    p = heap[2][1]; 
+    heap_delete_node(2, 1);
+    heap_add_node(3, p);
+  }else if(heap_size[3] - heap_size[2] > criteria){
+    p = heap[3][1];
+    heap_delete_node(3,1);
+    heap_add_node(2, p);
+  }
+}
+void mid_heap_add_node(NODE* new_node){
+
+  if(heap_size[2] < 1){
+      heap_add_node(2,new_node);
+  }else if(compare[2](new_node,heap[2][1])){
+      heap_add_node(2,new_node);
+  }else{
+      heap_add_node(3,new_node);
+  }
+
+  mid_heap_valance();
+}
+
+////////////////////////////////////////////////////////////////
+void db_init(){
+  db_ix = 0;
+}
+
+NODE* node_alloc(int id_, int tendency_){
+  NODE* p = &DB[db_ix++];
+  p->id = id_;
+  p->tendency = tendency_;
+  return p;
+}
+
+void heap_init(){
+  for(int i=0; i<4; i++){
+    heap_size[i] = 0;
+  }
+  compare[0] = lessthan;
+  compare[1] = greaterthan;
+  compare[2] = lessthan;
+  compare[3] = greaterthan;
+}
+
+void init(int n){
+  N = n;
+  db_init();
+  heap_init();
+}
+
+
+bool lessthan(NODE* l, NODE* r){
+  bool res = false;
+  if(l->tendency < r->tendency) res = true;
+  else if(l->tendency == r->tendency){
+    if(l->id < r->id) res = true;
+  }
+  return res;
+}
+
+bool greaterthan(NODE* l, NODE* r){
+  return !lessthan(l,r);
+}
+
+
+void swap(int which_h, int ix, int jx){
+  NODE* tmp = heap[which_h][ix];
+  heap[which_h][ix] = heap[which_h][jx];
+  heap[which_h][jx] = tmp;
+
+  heap[which_h][ix]->heap_ix[which_h] = ix;
+  heap[which_h][jx]->heap_ix[which_h] = jx;
+}
